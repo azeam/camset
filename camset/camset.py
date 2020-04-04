@@ -34,7 +34,7 @@ class Window(Gtk.Window):
         # box for videosize
         self.vidcontrolbox = Gtk.Box(spacing=1, orientation=Gtk.Orientation.VERTICAL)
         fixed.put(self.vidcontrolbox, 30, 80)
-        self.label = Gtk.Label(label="Video size (percentage)")  
+        self.label = Gtk.Label(label="Video scale (percentage)")  
         self.adj = Gtk.Adjustment(value = videosize, lower = 1, upper = 100, step_increment = 1, page_increment = 5, page_size=0)
         self.scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=self.adj)
         self.scale.set_digits(0)

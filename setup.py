@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='camset',
-    version='0.0.2',
+    version='0.0.4',
     author='Dennis Hägg',
     description='GUI for v4l2-ctl',
     long_description=long_description,
@@ -21,7 +21,7 @@ setuptools.setup(
         ('share/applications', ['res/camset.desktop']),
         ('share/icons', ['res/camset.png']),
     ],
-    python_requires='>=3, <4',
+    python_requires='>=3.7, <4',
     install_requires=['opencv-python', 'PyGObject'],
     entry_points={
         'console_scripts': [
