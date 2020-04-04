@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Camset
+Comment=Simple GUI for v4l2-ctl
+Exec=camset
+Terminal=false
+Type=Application
+Icon=camset.png
+Categories=Settings;HardwareSettings;
+StartupNotify=true
