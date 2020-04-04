@@ -14,6 +14,7 @@ def set_video_size(callback):
 
 class Window(Gtk.Window):
     def __init__(self):
+        # TODO: scrolled window and better alignment of boxes 
         Gtk.Window.__init__(self, title="Camset")
         
         # main container
@@ -34,7 +35,7 @@ class Window(Gtk.Window):
         self.vidcontrolbox = Gtk.Box(spacing=1, orientation=Gtk.Orientation.VERTICAL)
         fixed.put(self.vidcontrolbox, 30, 80)
         self.label = Gtk.Label(label="Video size (percentage)")  
-        self.adj = Gtk.Adjustment(value = videosize, lower = 1, upper = 100, step_increment = 1, page_increment = 10, page_size=0)
+        self.adj = Gtk.Adjustment(value = videosize, lower = 1, upper = 100, step_increment = 1, page_increment = 5, page_size=0)
         self.scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=self.adj)
         self.scale.set_digits(0)
         self.scale.connect("value-changed", set_video_size)
@@ -52,11 +53,11 @@ class Window(Gtk.Window):
 
         # container for menu controls
         self.menucontrolbox = Gtk.Box(spacing=1, orientation=Gtk.Orientation.VERTICAL)
-        fixed.put(self.menucontrolbox, 355, 30)
+        fixed.put(self.menucontrolbox, 255, 30)
         
         # container for bool controls
         self.boolcontrolbox = Gtk.Box(spacing=1, orientation=Gtk.Orientation.VERTICAL)
-        fixed.put(self.boolcontrolbox, 575, 30)
+        fixed.put(self.boolcontrolbox, 525, 30)
 
         # container for int controls
         self.controlbox = Gtk.Box(spacing=1, orientation=Gtk.Orientation.VERTICAL)
@@ -141,7 +142,7 @@ def read_capabilites(card):
                 step = line.split("step=", 1)[1]
                 step = int(step.split(' ', 1)[0])
 
-                adj = Gtk.Adjustment(value = value, lower = lower, upper = upper, step_increment = step, page_increment = 10, page_size=0)
+                adj = Gtk.Adjustment(value = value, lower = lower, upper = upper, step_increment = step, page_increment = 5, page_size=0)
                 win.scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
                 win.scale.set_digits(0)
                 win.scale.connect("value-changed", set_int_value, card, setting)
@@ -202,7 +203,6 @@ def check_devices():
 
 def show_frame():
     ret, frame = cap.read()
-    # TODO: better resize
     if frame is not None:
         width = int(frame.shape[1] * videosize / 100)
         height = int(frame.shape[0] * videosize / 100)
