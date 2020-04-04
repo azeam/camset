@@ -1,5 +1,5 @@
 # camset
-**Simple GUI for v4l2-ctl**
+**GUI for v4l2-ctl**
 
 ![Screenshot](http://bufonaturvard.se/pics/camset.png)
 

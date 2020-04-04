@@ -18,8 +18,8 @@ setuptools.setup(
         'Operating System :: POSIX',
     ],
     data_files=[
-        ('/home/azeam', ['res/camset.desktop']),
-        ('share/pixmaps', ['res/camset.png']),
+        ('share/applications', ['res/camset.desktop']),
+        ('share/icons', ['res/camset.png']),
     ],
     python_requires='>=3, <4',
     install_requires=['opencv-python', 'PyGObject'],
