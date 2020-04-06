@@ -1,13 +1,13 @@
 # Camset
 **GUI for v4l2-ctl**
 
-![Screenshot](http://bufonaturvard.se/pics/camset2.png)
+![Screenshot](http://bufonaturvard.se/pics/camset.png)
 
 **Description**  
-This is a tool for easy GUI adjustments of the Video4Linux (V4L) settings on Linux, using v4l2-ctl as backend. All controls are dynamically generated and the application should work with any other V4L device, but has only been tested with webcams. The changes will remain active when using the webcam in other applications, for example Skype.
+This is a tool for easy GUI adjustments of the Video4Linux (V4L) settings on Linux, using v4l2-ctl as backend. All controls are dynamically generated and the application should work with any V4L device, but has only been tested with webcams. The settings applied will remain active when using the webcam in other applications, for example Skype.
 
 **Note**  
-The application is WIP but in a functional state. Testing, issue reporting and suggestions are welcome. 
+The application is WIP in early development, but in a functional state. Testing, issue reporting and suggestions are welcome. Do note that there are other applications that are similar and with more functionality (for now). This is just a small project to practice some Python.
 
 **Dependencies**  
 Python 3.7+  
