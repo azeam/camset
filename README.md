@@ -6,8 +6,10 @@
 **Description**  
 This is a tool for easy GUI adjustments of the Video4Linux (V4L) settings on Linux, using v4l2-ctl as backend. All controls are dynamically generated and the application should work with any V4L device, but has only been tested with webcams. The settings applied will remain active when using the webcam in other applications, for example Skype.
 
+The `example_ioctl` folder contains some examples of direct ioctl calls for reading and setting V4L values (equivalent to `v4l2-ctl --list-formats-ext`, `v4l2-ctl -V` and `v4l2-ctl -c`), using the v4l2 Python bindnings library. The library has been slightly modified for compatibility with more recent Python versions (tested with 3.8.2) and is included. 
+
 **Note**  
-The application is WIP in early development, but in a functional state. Testing, issue reporting and suggestions are welcome. Do note that there are other applications that are similar and with more functionality (for now). This is just a small project to practice some Python.
+The application is WIP in early development, but in a functional state. Testing, issue reporting and suggestions are welcome. Do note that there are other applications that are similar and with more functionality (at least for now). This is just a small project to practice some Python.
 
 **Dependencies**  
 Python 3.7+  
