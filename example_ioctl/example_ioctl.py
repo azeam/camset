@@ -3,12 +3,91 @@ import fcntl
 
 # Working example code for direct ioctl calls, should be much faster than all the string splitting, but trickier to work with
 # The Python V4L bindings are outdated, some slight modifications have been made for Python3 compatibility 
+def get_detailed_outputs(vd, pixel_format, width, height):
+    qctrl = v4l2.v4l2_frmivalenum()
+    qctrl.pixel_format = pixel_format
+    qctrl.width = width
+    qctrl.height = height
+    qctrl.index = 0
+    while qctrl.index < 10: # TODO: better loop
+        fcntl.ioctl(vd, v4l2.VIDIOC_ENUM_FRAMEINTERVALS, qctrl)
+        if qctrl.type == v4l2.V4L2_FRMIVAL_TYPE_DISCRETE: 
+            print("Width:", width, "Height:", height, "FPS:", 1.0*qctrl.discrete.denominator/qctrl.discrete.numerator)
+        else:
+            print(width, height, 1.0*qctrl.stepwise.max.denominator/qctrl.stepwise.max.numerator, 1.0*qctrl.stepwise.min.denominator/qctrl.stepwise.min.numerator)
+        qctrl.index += 1    
 
-def read_ioctl_capabalities():
+def get_outputs(pixel_format):
+    vd = open('/dev/video0', 'rb+', buffering=0)
+    
+    qctrl = v4l2.v4l2_frmsizeenum()
+    qctrl.type = v4l2.V4L2_BUF_TYPE_VIDEO_OUTPUT
+    qctrl.index = 0
+    qctrl.pixel_format = pixel_format
+
+    while qctrl.index < 10: # TODO: better loop
+        try:
+            fcntl.ioctl(vd, v4l2.VIDIOC_ENUM_FRAMESIZES, qctrl)
+            if (qctrl.type == v4l2.V4L2_FRMSIZE_TYPE_DISCRETE):
+                get_detailed_outputs(vd, qctrl.pixel_format, qctrl.discrete.width, qctrl.discrete.height)
+            else:
+                # TODO: translate, can't test
+                ''' 
+                for (width=frmsize.stepwise.min_width; width< frmsize.stepwise.max_width; width+=frmsize.stepwise.step_width)
+                    for (height=frmsize.stepwise.min_height; height< frmsize.stepwise.max_height; height+=frmsize.stepwise.step_height)
+                        printFrameInterval(fd, frmsize.pixel_format, width, height);
+                '''
+        except:
+            pass
+        qctrl.index += 1
+    vd.close()
+
+def read_camera_controls():
+    vd = open('/dev/video0', 'rb+', buffering=0)
+    encoding = 'utf-8'
+    qctrl = v4l2.v4l2_queryctrl()
+    mctrl = v4l2.v4l2_querymenu()
+    vctrl = v4l2.v4l2_control()
+    qctrl.id = v4l2.V4L2_CID_CAMERA_CLASS_BASE
+    mctrl.index = 0
+    
+    while qctrl.id < v4l2.V4L2_CID_PRIVACY:
+        try:
+            vctrl.id = qctrl.id
+            fcntl.ioctl(vd, v4l2.VIDIOC_QUERYCTRL, qctrl)
+            fcntl.ioctl(vd, v4l2.VIDIOC_G_CTRL, vctrl)
+            print("Control name:", str(qctrl.name, encoding))
+            print("Control type, 1=int, 2=bool, 3=menu:", qctrl.type) 
+            
+            print("Maximum:", qctrl.maximum)
+            print("Minimum:", qctrl.minimum)
+            print("Step:", qctrl.step)
+            print("Default:", qctrl.default_value)
+            print("Value:", vctrl.value)
+            
+            if qctrl.type == 3: # is menu
+                while mctrl.index <= qctrl.maximum:
+                    try: # needed because sometimes index 0 doesn't exist but 1 does
+                        mctrl.id = qctrl.id
+                        fcntl.ioctl(vd, v4l2.VIDIOC_QUERYMENU, mctrl)
+                        print("Menu name:", str(qctrl.name, encoding))
+                        print("Menu option name:", str(mctrl.name, encoding))
+                        print("Menu option index:", mctrl.index)
+                        mctrl.index += 1
+                    except:
+                        mctrl.index += 1
+                
+        except:
+            pass
+        qctrl.id += 1
+    vd.close()
+
+def read_base_capabalities():
     vd = open('/dev/video0', 'rb+', buffering=0)
     cp = v4l2.v4l2_capability()
     encoding = 'utf-8'
     
+    # basic info
     fcntl.ioctl(vd, v4l2.VIDIOC_QUERYCAP, cp)
     print(str(cp.card, encoding))
     print(str(cp.driver, encoding))
@@ -16,35 +95,45 @@ def read_ioctl_capabalities():
     print("Supports read() call?\t", bool(cp.capabilities & v4l2.V4L2_CAP_READWRITE))
     print("Supports streaming?\t", bool(cp.capabilities & v4l2.V4L2_CAP_STREAMING))
 
-    fmt = v4l2.v4l2_format()
-    fmt.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
-    fcntl.ioctl(vd, v4l2.VIDIOC_G_FMT, fmt)
-    print("Width:", fmt.fmt.pix.width)
-    print("Height:", fmt.fmt.pix.height)
+    # current height, width
+    qctrl = v4l2.v4l2_format()
+    qctrl.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+    fcntl.ioctl(vd, v4l2.VIDIOC_G_FMT, qctrl)
+    print("Width:", qctrl.fmt.pix.width)
+    print("Height:", qctrl.fmt.pix.height)
 
-    fmtdesc = v4l2.v4l2_fmtdesc()
-    fmtdesc.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
-    fmtdesc.index = 0 # possible to get 0 and 1 (default for each codec), how to read other resolution options?
-    fcntl.ioctl(vd, v4l2.VIDIOC_ENUM_FMT, fmtdesc)
-    print("Resolution:", str(fmtdesc.description, encoding))
+    # output overview
+    qctrl = v4l2.v4l2_fmtdesc()
+    qctrl.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+    qctrl.index = 1
+    fcntl.ioctl(vd, v4l2.VIDIOC_ENUM_FMT, qctrl)
+    print("Format:", str(qctrl.description, encoding))
+    print("Pixelformat ID:", qctrl.pixelformat)
+    get_outputs(qctrl.pixelformat) # pass pixelformat to read outputs, increase index for different codecs
 
+    # main controls
     qctrl = v4l2.v4l2_queryctrl()
     mctrl = v4l2.v4l2_querymenu()
     vctrl = v4l2.v4l2_control()
-    qctrl.id = v4l2.V4L2_CID_BASE; 
+    qctrl.id = v4l2.V4L2_CID_BASE
     mctrl.index = 0
     
-    # does not include the exposure auto menu, which v4l2-ctl shows, even if changed to V4L2_CID_CAMERA_CLASS_BASE, not sure why
     while qctrl.id < v4l2.V4L2_CID_LASTP1: 
         try:
             vctrl.id = qctrl.id
             fcntl.ioctl(vd, v4l2.VIDIOC_QUERYCTRL, qctrl)
             fcntl.ioctl(vd, v4l2.VIDIOC_G_CTRL, vctrl)
-            print(str(qctrl.name, encoding))
-            print(qctrl.type)
-            print(qctrl.maximum)
-            print(qctrl.minimum)
-            print(vctrl.value)
+            print("Control name:", str(qctrl.name, encoding))
+            print("Control type, 1=int, 2=bool, 3=menu:", qctrl.type) 
+            '''
+            There are more types, 4=BUTTON, 5=INTEGER64, 6=CTRL_CLASS, 7=STRING, 8=BITMASK,	9=INTEGER_MENU
+            Not sure what to do with those, can't test
+            '''
+            print("Maximum:", qctrl.maximum)
+            print("Minimum:", qctrl.minimum)
+            print("Step:", qctrl.step)
+            print("Default:", qctrl.default_value)
+            print("Value:", vctrl.value)
             '''
             win.label = Gtk.Label(hexpand = True, vexpand = False)
             win.label.set_text(str(qctrl.name, encoding))
@@ -61,19 +150,23 @@ def read_ioctl_capabalities():
             '''
             if qctrl.type == 3: # is menu
                 while mctrl.index <= qctrl.maximum:
-                    mctrl.id = qctrl.id
-                    fcntl.ioctl(vd, v4l2.VIDIOC_QUERYMENU, mctrl)
-                    print(str(qctrl.name, encoding))
-                    print(str(mctrl.name, encoding))
-                    print(mctrl.index)
-                    mctrl.index += 1
+                    try:
+                        mctrl.id = qctrl.id
+                        fcntl.ioctl(vd, v4l2.VIDIOC_QUERYMENU, mctrl)
+                        print("Menu name:", str(qctrl.name, encoding))
+                        print("Menu option name:", str(mctrl.name, encoding))
+                        print("Menu option index:", mctrl.index)
+                        mctrl.index += 1
+                    except:
+                        mctrl.index += 1
         except:
             pass
         qctrl.id += 1
     vd.close()
 
 def main():
-    read_ioctl_capabalities()
+    read_base_capabalities()
+    read_camera_controls()
 
 if __name__ == "__main__":
     main()
