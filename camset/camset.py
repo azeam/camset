@@ -2,6 +2,8 @@ import cv2
 import gi
 import subprocess
 
+# TODO: proper ioctl calls instead of using v4l2-ctl ... ?
+
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, GdkPixbuf
 
@@ -31,8 +33,9 @@ def start_camera_feed(pixelformat, vfeedwidth, vfeedheight, fourcode):
     cap.set(3,int(vfeedwidth))
     cap.set(4,int(vfeedheight))
     cap.set(cv2.CAP_PROP_FOURCC, fourcode)
-    win.btn_showcam.set_active(True)
     # cap.set(5,1) 1 fps
+    win.btn_showcam.set_active(True)
+    GLib.idle_add(show_frame)
 
 def clear_and_rebuild():
     card = get_active_card()
@@ -70,7 +73,7 @@ def get_video_resolution():
 class CamWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Camera feed")
-        self.connect('delete-event', lambda w, e: stop_camera_feed() or True)
+        self.connect('delete-event', lambda w, e: stop_camera_feed() or True) # override delete and just hide window, or widgets will be destroyed
         # video     
         fixed = Gtk.Fixed()
         self.add(fixed)
@@ -124,8 +127,8 @@ class Window(Gtk.Window):
         self.intcontrolbox = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
         self.intcontrolbox.set_margin_bottom(50)
         self.devicelabelbox = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
-        self.devicecontrolbox = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
         self.devicelabelbox.set_margin_bottom(30)
+        self.devicecontrolbox = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
         self.devicecontrolbox.set_margin_bottom(30)
 
         # combobox for device selection
@@ -186,6 +189,7 @@ class Window(Gtk.Window):
                     value = line.split("default=", 1)[1]
                     value = int(value.split(' ', 1)[0])
                     subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=False, text=True)
+        win.res_combobox.set_active(0) # first option is default
         clear_and_rebuild()
 
     def on_device_changed(self, widget):
@@ -236,7 +240,6 @@ def set_sensitivity(card):
         if "0x" in line:
             if "int" in line:
                 index += 1
-                # TODO: fix for grid
                 if (len(controls) > ((index -1))): # check because of error when filling ctrl_combobox at start
                     if "flags=inactive" in line:
                         controls[(index - 1)].set_sensitive(False)
@@ -316,7 +319,6 @@ def read_capabilites(card):
             win.label.set_size_request(-1, 35)
             win.label.set_halign(Gtk.Align.END)
             
-            # TODO: save defaults and add reset option
             if "int" in line:
                 upper = line.split("max=", 1)[1]
                 upper = int(upper.split(' ', 1)[0])
@@ -393,6 +395,7 @@ def show_frame():
             width = int(frame.shape[1] * videosize / 100)
             height = int(frame.shape[0] * videosize / 100)
             dim = (width, height)
+            # TODO: resizing video and window this way is very cpu intensive for large resolutions, should be improved or removed
             frame = cv2.resize(frame, dim, interpolation = cv2.INTER_CUBIC)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # needed for proper color representation in gtk
             pb = GdkPixbuf.Pixbuf.new_from_data(frame.tostring(),
@@ -403,17 +406,15 @@ def show_frame():
                                                 frame.shape[0],
                                                 frame.shape[2]*frame.shape[1]) # last argument is "rowstride (int) – Distance in bytes between row starts" (??)
             camwin.image.set_from_pixbuf(pb.copy())
-        else:
-            cap.release()
-            camwin.image.clear()
         camwin.resize(1, 1)
-    return True
+        return True
+    else: 
+        return False
 
 def main():
     check_devices()
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
-    GLib.idle_add(show_frame)
     Gtk.main()
 
 cap = None
