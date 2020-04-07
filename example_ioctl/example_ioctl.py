@@ -6,7 +6,8 @@ import fcntl
 # Tried implementing this but there's barely any performance difference from what I can tell, nor much difference in code quantity.
 # Startup lag is probably mainly caused by gtk widgets building. Might continue with the string splitting, uglier but easier
 #
-# The Python V4L bindings are outdated, some slight modifications have been made for Python3 compatibility 
+# The Python V4L bindings are outdated, some slight modifications have been made for Python 3.8.2 compatibility 
+
 def get_detailed_outputs(vd, pixel_format, width, height):
     qctrl = v4l2.v4l2_frmivalenum()
     qctrl.pixel_format = pixel_format
@@ -46,7 +47,7 @@ def get_outputs(pixel_format):
         qctrl.index += 1
     vd.close()
 
-def read_camera_controls():
+def read_camera_controls(): # CID_BASE IDs do not include all settings that v4l2-ctl -L has, check CAMERA_CLASS_BASE ID range for the rest
     vd = open('/dev/video0', 'rb+', buffering=0)
     encoding = 'utf-8'
     qctrl = v4l2.v4l2_queryctrl()
@@ -116,7 +117,7 @@ def read_base_capabalities():
     # output overview
     qctrl = v4l2.v4l2_fmtdesc()
     qctrl.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
-    qctrl.index = 1
+    qctrl.index = 0
     fcntl.ioctl(vd, v4l2.VIDIOC_ENUM_FMT, qctrl)
     print("Format:", str(qctrl.description, encoding))
     print("Pixelformat ID:", qctrl.pixelformat)
@@ -129,7 +130,7 @@ def read_base_capabalities():
     qctrl.id = v4l2.V4L2_CID_BASE
     mctrl.index = 0
     
-    while qctrl.id < v4l2.V4L2_CID_LASTP1: 
+    while qctrl.id < v4l2.V4L2_CID_LASTP1: # LASTP1 is last item in CID_BASE
         try:
             vctrl.id = qctrl.id
             fcntl.ioctl(vd, v4l2.VIDIOC_QUERYCTRL, qctrl)
