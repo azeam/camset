@@ -12,7 +12,7 @@ The `example_ioctl` folder contains some examples of direct ioctl calls for read
 The application is WIP in early development, but in a functional state. Testing, issue reporting and suggestions are welcome. Do note that there are other applications that are similar and with more functionality (at least for now). This is just a small project to practice some Python.
 
 **Dependencies**  
-Python 3.7+  
+Python 3  
 pip  
 v4l2-ctl  
 pkg-config
@@ -25,4 +25,4 @@ For Ubuntu:
 2. `pip3 install camset`
 
 The pip install includes a .desktop file, which should be picked up by the DE. If `camset` is not found you may need to set up your path environment, for example:  
-`$PATH=$PATH:/home/USER/.local/bin`
+`PATH=$PATH:/home/USER/.local/bin`

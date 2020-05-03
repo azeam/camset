@@ -27,7 +27,7 @@ def start_camera_feed(pixelformat, vfeedwidth, vfeedheight, fourcode):
     card = get_active_card()
     global cap
     cap = None # stop stream because resolution can't be changed while running
-    subprocess.run(['v4l2-ctl', '-d', card, '-v', 'height={0},width={1},pixelformat={2}'.format(vfeedheight, vfeedwidth, pixelformat)], check=True, text=True)
+    subprocess.run(['v4l2-ctl', '-d', card, '-v', 'height={0},width={1},pixelformat={2}'.format(vfeedheight, vfeedwidth, pixelformat)], check=True, universal_newlines=True)
     cap = cv2.VideoCapture(card, cv2.CAP_V4L2)
     # also set resolution to cap, otherwise cv2 will use default and not the res set by v4l2
     cap.set(3,int(vfeedwidth))
@@ -179,7 +179,7 @@ class Window(Gtk.Window):
 
     def on_btn_defaults_clicked(self, widget):
         card = get_active_card()
-        capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, text=True, stdout=subprocess.PIPE)
+        capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
         capabilites = capread.stdout.split('\n')
         for line in capabilites:
             line = line.strip()
@@ -188,13 +188,13 @@ class Window(Gtk.Window):
                     setting = line.split('0x', 1)[0].strip()
                     value = line.split("default=", 1)[1]
                     value = int(value.split(' ', 1)[0])
-                    subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=False, text=True)
+                    subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=False, universal_newlines=True)
         win.res_combobox.set_active(0) # first option is default
         clear_and_rebuild()
 
     def on_device_changed(self, widget):
         card = get_active_card()
-        devnameread = subprocess.run(['v4l2-ctl', '-d', card, '-D'], check=True, text=True, stdout=subprocess.PIPE)
+        devnameread = subprocess.run(['v4l2-ctl', '-d', card, '-D'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
         devnameline = devnameread.stdout.split('\n')
         for line in devnameline:
             if "Card type" in line:
@@ -210,13 +210,13 @@ class Window(Gtk.Window):
 
 def set_int_value(callback, card, setting):
     value = str(int(callback.get_value()))
-    subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=True, text=True)
+    subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=True, universal_newlines=True)
     
 def set_bool_value(callback, active, card, setting):
     if callback.get_active():
-        subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}=1'.format(setting)], check=True, text=True)
+        subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}=1'.format(setting)], check=True, universal_newlines=True)
     else:
-        subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}=0'.format(setting)], check=True, text=True)
+        subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}=0'.format(setting)], check=True, universal_newlines=True)
     set_sensitivity(card)
 
 def on_ctrl_combo_changed(callback, card, setting): # aka set_menu_value
@@ -224,7 +224,7 @@ def on_ctrl_combo_changed(callback, card, setting): # aka set_menu_value
     model = callback.get_model()
     value = model[index]
     value = value[0].split(": ", 1)[0] # get value from text because index is not (always) same as value
-    subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=True, text=True)
+    subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=True, universal_newlines=True)
     set_sensitivity(card)
     
 def on_output_combo_changed(callback, card): # aka set_menu_value
@@ -232,7 +232,7 @@ def on_output_combo_changed(callback, card): # aka set_menu_value
     start_camera_feed(list[0], list[1], list[2], list[3])
 
 def set_sensitivity(card):
-    capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, text=True, stdout=subprocess.PIPE)
+    capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
     capabilites = capread.stdout.split('\n')
     controls = win.intcontrolbox.get_children()
     index = 0
@@ -247,7 +247,7 @@ def set_sensitivity(card):
                         controls[(index - 1)].set_sensitive(True)
 
 def read_resolution_capabilites(card):
-    outputread = subprocess.run(['v4l2-ctl', '-d', card, '--list-formats-ext'], check=True, text=True, stdout=subprocess.PIPE)
+    outputread = subprocess.run(['v4l2-ctl', '-d', card, '--list-formats-ext'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
     outputs = outputread.stdout.split('\n')
     showcombo = False
     pre = ''
@@ -281,7 +281,7 @@ def read_resolution_capabilites(card):
         win.menucontrolbox.pack_start(win.res_combobox, False, False, 0)
         win.menulabelbox.pack_start(win.label, False, False, 0)
         # find item in combobox that equals current value and set active
-        curoutputread = subprocess.run(['v4l2-ctl', '-d', card, '-V'], check=True, text=True, stdout=subprocess.PIPE)
+        curoutputread = subprocess.run(['v4l2-ctl', '-d', card, '-V'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
         curoutput = curoutputread.stdout.split('\n')
         hewi = ''
         pf = ''
@@ -304,7 +304,7 @@ def read_resolution_capabilites(card):
         win.res_combobox.set_active(index - 1)
 
 def read_capabilites(card):
-    capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, text=True, stdout=subprocess.PIPE)
+    capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
     capabilites = capread.stdout.split('\n')
     menvalue = 0 # set menvalue when scanning menu to be able to read from menu options
     for line in capabilites:
@@ -381,7 +381,7 @@ def read_capabilites(card):
     set_sensitivity(card)
                 
 def check_devices():
-    devices = subprocess.run(['v4l2-ctl', '--list-devices'], check=False, text=True, stdout=subprocess.PIPE)
+    devices = subprocess.run(['v4l2-ctl', '--list-devices'], check=False, universal_newlines=True, stdout=subprocess.PIPE)
     for line in devices.stdout.split('\n'):
         if "dev" in line:
             line = line.strip()
