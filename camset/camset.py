@@ -27,15 +27,20 @@ def start_camera_feed(pixelformat, vfeedwidth, vfeedheight, fourcode):
     card = get_active_card()
     global cap
     cap = None # stop stream because resolution can't be changed while running
-    subprocess.run(['v4l2-ctl', '-d', card, '-v', 'height={0},width={1},pixelformat={2}'.format(vfeedheight, vfeedwidth, pixelformat)], check=True, universal_newlines=True)
-    cap = cv2.VideoCapture(card, cv2.CAP_V4L2)
-    # also set resolution to cap, otherwise cv2 will use default and not the res set by v4l2
-    cap.set(3,int(vfeedwidth))
-    cap.set(4,int(vfeedheight))
-    cap.set(cv2.CAP_PROP_FOURCC, fourcode)
-    # cap.set(5,1) 1 fps
-    win.btn_showcam.set_active(True)
-    GLib.idle_add(show_frame)
+    try:
+        subprocess.run(['v4l2-ctl', '-d', card, '-v', 'height={0},width={1},pixelformat={2}'.format(vfeedheight, vfeedwidth, pixelformat)], check=True, universal_newlines=True)
+        cap = cv2.VideoCapture(card, cv2.CAP_V4L2)
+        # also set resolution to cap, otherwise cv2 will use default and not the res set by v4l2
+        cap.set(3,int(vfeedwidth))
+        cap.set(4,int(vfeedheight))
+        cap.set(cv2.CAP_PROP_FOURCC, fourcode)
+        # cap.set(5,1) 1 fps
+        win.btn_showcam.set_active(True)
+        GLib.idle_add(show_frame)
+        return True
+    except subprocess.CalledProcessError:
+        win.btn_showcam.set_active(False)
+        return False
 
 def clear_and_rebuild():
     card = get_active_card()
@@ -172,8 +177,18 @@ class Window(Gtk.Window):
     def on_btn_showcam_toggled(self, widget):
         if widget.get_active():
             list = get_video_resolution()
-            start_camera_feed(list[0], list[1], list[2], list[3])
-            camwin.show()
+            if (start_camera_feed(list[0], list[1], list[2], list[3])):
+                camwin.show()
+            else:
+                dialog = Gtk.MessageDialog(
+                    parent=win,
+                    modal=True,
+                    message_type=Gtk.MessageType.WARNING,
+                    buttons=Gtk.ButtonsType.OK,
+                    text="Some other application is using the device, unable to start feed."
+                )
+                dialog.run()
+                dialog.destroy()
         else:
             stop_camera_feed()
 
@@ -205,7 +220,6 @@ class Window(Gtk.Window):
                 else:
                     win.set_title(title="Camtest")
                     camwin.set_title(title="Camera feed")
-
         clear_and_rebuild()
 
 def set_int_value(callback, card, setting):
@@ -229,7 +243,8 @@ def on_ctrl_combo_changed(callback, card, setting): # aka set_menu_value
     
 def on_output_combo_changed(callback, card): # aka set_menu_value
     list = get_video_resolution()
-    start_camera_feed(list[0], list[1], list[2], list[3])
+    if (start_camera_feed(list[0], list[1], list[2], list[3])):
+        camwin.show()
 
 def set_sensitivity(card):
     capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
@@ -412,6 +427,7 @@ def show_frame():
         return False
 
 def main():
+    camwin.hide()
     check_devices()
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
