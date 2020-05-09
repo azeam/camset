@@ -185,7 +185,7 @@ class Window(Gtk.Window):
                     modal=True,
                     message_type=Gtk.MessageType.WARNING,
                     buttons=Gtk.ButtonsType.OK,
-                    text="Some other application is using the device, unable to start feed."
+                    text="Unable to start feed. Either the device is not able to output video or the resource is busy"
                 )
                 dialog.run()
                 dialog.destroy()
@@ -215,10 +215,10 @@ class Window(Gtk.Window):
             if "Card type" in line:
                 cardname = line.split(': ', 1)[1].strip()
                 if len(cardname) > 0:
-                    win.set_title(title="Camtest - {}".format(cardname))
+                    win.set_title(title="Camset - {}".format(cardname))
                     camwin.set_title(title="Camera feed - {}".format(cardname))
                 else:
-                    win.set_title(title="Camtest")
+                    win.set_title(title="Camset")
                     camwin.set_title(title="Camera feed")
         clear_and_rebuild()
 
@@ -271,7 +271,7 @@ def read_resolution_capabilites(card):
     for line in outputs:
         if ":" in line:
             line = line.strip()
-            if "]:" in line:
+            if "'" in line:
                 pre = line.split("'", 1)[1]
                 pre = pre.split("'", 1)[0]
             else:
