@@ -26,6 +26,7 @@ def stop_camera_feed():
 def start_camera_feed(pixelformat, vfeedwidth, vfeedheight, fourcode):
     card = get_active_card()
     global cap
+    global runId
     cap = None # stop stream because resolution can't be changed while running
     try:
         subprocess.run(['v4l2-ctl', '-d', card, '-v', 'height={0},width={1},pixelformat={2}'.format(vfeedheight, vfeedwidth, pixelformat)], check=True, universal_newlines=True)
@@ -35,12 +36,32 @@ def start_camera_feed(pixelformat, vfeedwidth, vfeedheight, fourcode):
         cap.set(4,int(vfeedheight))
         cap.set(cv2.CAP_PROP_FOURCC, fourcode)
         # cap.set(5,1) 1 fps
-        win.btn_showcam.set_active(True)
-        GLib.idle_add(show_frame)
+        
+        runId = GLib.idle_add(show_frame)
         return True
     except subprocess.CalledProcessError:
-        win.btn_showcam.set_active(False)
+        runId = 0
         return False
+
+def show_error(message):
+    dialog = Gtk.MessageDialog(
+            parent=win,
+            modal=True,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.OK,
+            text=message
+        )
+    dialog.run()
+    dialog.destroy()
+
+def init_camera_feed():
+    list = get_video_resolution()
+    if (start_camera_feed(list[0], list[1], list[2], list[3])):
+        camwin.show()
+        win.btn_showcam.set_active(True)
+    else:
+        stop_camera_feed()
+        show_error("Unable to start feed. Either the device is not able to output video or the resource is busy")
 
 def clear_and_rebuild():
     card = get_active_card()
@@ -147,7 +168,6 @@ class Window(Gtk.Window):
         self.combobox.pack_start(cell, 25)
         self.combobox.add_attribute(cell, 'text', 0)
         self.combobox.set_model(self.store)
-        self.combobox.connect('changed', self.on_device_changed)
         self.devicelabelbox.add(self.label)
 
         # buttons
@@ -175,20 +195,10 @@ class Window(Gtk.Window):
         grid.attach_next_to(self.boolcontrolbox, self.boollabelbox, Gtk.PositionType.RIGHT, 1, 1)
 
     def on_btn_showcam_toggled(self, widget):
-        if widget.get_active():
-            list = get_video_resolution()
-            if (start_camera_feed(list[0], list[1], list[2], list[3])):
-                camwin.show()
-            else:
-                dialog = Gtk.MessageDialog(
-                    parent=win,
-                    modal=True,
-                    message_type=Gtk.MessageType.WARNING,
-                    buttons=Gtk.ButtonsType.OK,
-                    text="Unable to start feed. Either the device is not able to output video or the resource is busy"
-                )
-                dialog.run()
-                dialog.destroy()
+        if widget.get_active() and not camwin.props.visible:
+            init_camera_feed()
+        elif widget.get_active() and camwin.props.visible:
+            pass 
         else:
             stop_camera_feed()
 
@@ -208,32 +218,42 @@ class Window(Gtk.Window):
         clear_and_rebuild()
 
     def on_device_changed(self, widget):
+        stop_camera_feed() 
+        # stopping feed is not (always) enough to kill the idle process, remove if set
+        global runId
+        if runId > 0:
+            GLib.source_remove(runId)
         card = get_active_card()
-        devnameread = subprocess.run(['v4l2-ctl', '-d', card, '-D'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
-        devnameline = devnameread.stdout.split('\n')
-        for line in devnameline:
-            if "Card type" in line:
-                cardname = line.split(': ', 1)[1].strip()
-                if len(cardname) > 0:
-                    win.set_title(title="Camset - {}".format(cardname))
-                    camwin.set_title(title="Camera feed - {}".format(cardname))
-                else:
-                    win.set_title(title="Camset")
-                    camwin.set_title(title="Camera feed")
+        try:
+            devnameread = subprocess.run(['v4l2-ctl', '-d', card, '-D'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
+            devnameline = devnameread.stdout.split('\n')
+            for line in devnameline:
+                if "Card type" in line:
+                    cardname = line.split(': ', 1)[1].strip()
+                    if len(cardname) > 0:
+                        win.set_title(title="Camset - {}".format(cardname))
+                        camwin.set_title(title="Camera feed - {}".format(cardname))
+                    else:
+                        win.set_title(title="Camset")
+                        camwin.set_title(title="Camera feed")
+        except:
+            runId = 0
+            pass
         clear_and_rebuild()
+        init_camera_feed()
 
 def set_int_value(callback, card, setting):
     value = str(int(callback.get_value()))
     subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=True, universal_newlines=True)
     
-def set_bool_value(callback, active, card, setting):
+def set_bool_value(callback, card, setting):
     if callback.get_active():
         subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}=1'.format(setting)], check=True, universal_newlines=True)
     else:
         subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}=0'.format(setting)], check=True, universal_newlines=True)
     set_sensitivity(card)
 
-def on_ctrl_combo_changed(callback, card, setting): # aka set_menu_value
+def on_ctrl_combo_changed(callback, card, setting): # change combobox values except resolution
     index = callback.get_active()
     model = callback.get_model()
     value = model[index]
@@ -241,10 +261,14 @@ def on_ctrl_combo_changed(callback, card, setting): # aka set_menu_value
     subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=True, universal_newlines=True)
     set_sensitivity(card)
     
-def on_output_combo_changed(callback, card): # aka set_menu_value
-    list = get_video_resolution()
-    if (start_camera_feed(list[0], list[1], list[2], list[3])):
-        camwin.show()
+def on_output_combo_changed(callback, card): # change resolution
+    if (camwin.props.visible):
+        stop_camera_feed()
+        # cap never gets reset to none when initing the feed again, causing it to run twice, manually remove runId if set
+        global runId
+        if runId > 0:
+            GLib.source_remove(runId)
+        init_camera_feed()  
 
 def set_sensitivity(card):
     capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
@@ -319,7 +343,10 @@ def read_resolution_capabilites(card):
         win.res_combobox.set_active(index - 1)
 
 def read_capabilites(card):
-    capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
+    try:
+        capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
+    except:
+        return
     capabilites = capread.stdout.split('\n')
     menvalue = 0 # set menvalue when scanning menu to be able to read from menu options
     for line in capabilites:
@@ -381,19 +408,15 @@ def read_capabilites(card):
         # menu options
         else: 
             if line:
-                try:
-                    # map index to value
-                    value = int(line.split(": ", 1)[0]) # get value from text because index is not (always) same as value
-                    win.ctrl_store.append ([line])
-                    # count index, set active
-                    index = 0
-                    for item in win.ctrl_store:
-                        index += 1
-                    if value == menvalue:
-                        win.ctrl_combobox.set_active(index - 1)
-                except ValueError:
-                    # E.g. v4l2loopback has 'User Controls' output
-                    pass
+                # map index to value
+                value = int(line.split(": ", 1)[0]) # get value from text because index is not (always) same as value
+                win.ctrl_store.append ([line])
+                # count index, set active
+                index = 0
+                for item in win.ctrl_store:
+                    index += 1
+                if value == menvalue:
+                    win.ctrl_combobox.set_active(index - 1)
 
     read_resolution_capabilites(card)
     win.show_all()
@@ -401,34 +424,38 @@ def read_capabilites(card):
                 
 def check_devices():
     devices = subprocess.run(['v4l2-ctl', '--list-devices'], check=False, universal_newlines=True, stdout=subprocess.PIPE)
+    i = 0
     for line in devices.stdout.split('\n'):
         if "dev" in line:
             line = line.strip()
             win.store.append ([line])
-            win.combobox.set_active(0)
+            i += 1
+    win.combobox.connect('changed', win.on_device_changed) # start after populating devices or action will be called when adding
+    if (i > 0):
+        win.combobox.set_active(0)
 
 def show_frame():
-    if cap is not None:
-        ret, frame = cap.read()
-        if frame is not None:
-            width = int(frame.shape[1] * videosize / 100)
-            height = int(frame.shape[0] * videosize / 100)
-            dim = (width, height)
-            # TODO: resizing video and window this way is very cpu intensive for large resolutions, should be improved or removed
-            frame = cv2.resize(frame, dim, interpolation = cv2.INTER_CUBIC)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # needed for proper color representation in gtk
-            pb = GdkPixbuf.Pixbuf.new_from_data(frame.tostring(),
-                                                GdkPixbuf.Colorspace.RGB,
-                                                False,
-                                                8,
-                                                frame.shape[1],
-                                                frame.shape[0],
-                                                frame.shape[2]*frame.shape[1]) # last argument is "rowstride (int) – Distance in bytes between row starts" (??)
-            camwin.image.set_from_pixbuf(pb.copy())
-        camwin.resize(1, 1)
-        return True
-    else: 
+    global cap
+    if cap is None:
         return False
+    ret, frame = cap.read()
+    if frame is not None:
+        width = int(frame.shape[1] * videosize / 100)
+        height = int(frame.shape[0] * videosize / 100)
+        dim = (width, height)
+        # TODO: resizing video and window this way is very cpu intensive for large resolutions, should be improved or removed
+        frame = cv2.resize(frame, dim, interpolation = cv2.INTER_CUBIC)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # needed for proper color representation in gtk
+        pb = GdkPixbuf.Pixbuf.new_from_data(frame.tostring(),
+                                            GdkPixbuf.Colorspace.RGB,
+                                            False,
+                                            8,
+                                            frame.shape[1],
+                                            frame.shape[0],
+                                            frame.shape[2]*frame.shape[1]) # last argument is "rowstride (int) – Distance in bytes between row starts" (??)
+        camwin.image.set_from_pixbuf(pb.copy())
+    camwin.resize(1, 1)
+    return True
 
 def main():
     camwin.hide()
@@ -437,6 +464,7 @@ def main():
     win.show_all()
     Gtk.main()
 
+runId = 0
 cap = None
 videosize = 100
 win = Window()
