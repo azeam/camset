@@ -381,15 +381,19 @@ def read_capabilites(card):
         # menu options
         else: 
             if line:
-                # map index to value
-                value = int(line.split(": ", 1)[0]) # get value from text because index is not (always) same as value
-                win.ctrl_store.append ([line])
-                # count index, set active
-                index = 0
-                for item in win.ctrl_store:
-                    index += 1
-                if value == menvalue:
-                    win.ctrl_combobox.set_active(index - 1)
+                try:
+                    # map index to value
+                    value = int(line.split(": ", 1)[0]) # get value from text because index is not (always) same as value
+                    win.ctrl_store.append ([line])
+                    # count index, set active
+                    index = 0
+                    for item in win.ctrl_store:
+                        index += 1
+                    if value == menvalue:
+                        win.ctrl_combobox.set_active(index - 1)
+                except ValueError:
+                    # E.g. v4l2loopback has 'User Controls' output
+                    pass
 
     read_resolution_capabilites(card)
     win.show_all()
