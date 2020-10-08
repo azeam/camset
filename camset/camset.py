@@ -246,7 +246,7 @@ def set_int_value(callback, card, setting):
     value = str(int(callback.get_value()))
     subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=True, universal_newlines=True)
     
-def set_bool_value(callback, card, setting):
+def set_bool_value(callback, active, card, setting):
     if callback.get_active():
         subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}=1'.format(setting)], check=True, universal_newlines=True)
     else:
