@@ -28,40 +28,45 @@ def start_camera_feed(pixelformat, vfeedwidth, vfeedheight, fourcode):
     global cap
     global runId
     cap = None # stop stream because resolution can't be changed while running
-    try:
-        subprocess.run(['v4l2-ctl', '-d', card, '-v', 'height={0},width={1},pixelformat={2}'.format(vfeedheight, vfeedwidth, pixelformat)], check=True, universal_newlines=True)
+    errorMsg = ""
+    
+    process = subprocess.Popen(['v4l2-ctl', '-d', card, '-v', 'height={0},width={1},pixelformat={2}'.format(vfeedheight, vfeedwidth, pixelformat)], universal_newlines=True, stdout=subprocess.PIPE)
+    out, err = process.communicate()
+    if process.returncode == 0:
         cap = cv2.VideoCapture(card, cv2.CAP_V4L2)
         # also set resolution to cap, otherwise cv2 will use default and not the res set by v4l2
         cap.set(3,int(vfeedwidth))
         cap.set(4,int(vfeedheight))
         cap.set(cv2.CAP_PROP_FOURCC, fourcode)
         # cap.set(5,1) 1 fps
-        
-        runId = GLib.idle_add(show_frame)
-        return True
-    except subprocess.CalledProcessError:
-        runId = 0
-        return False
+        runId = GLib.idle_add(show_frame) 
+    else: 
+        if "Device or resource busy" in str(out):
+            errorMsg = "Unable to start feed, the device is busy"
+        elif process.returncode == 1:
+            errorMsg = "Unable to start feed, not a valid output device"
+        else:
+            errorMsg = "Unable to start feed, unknown error"
+        runId = 0       
+    return errorMsg
+
+def hide_error():
+    win.warning.set_reveal_child(False)
 
 def show_error(message):
-    dialog = Gtk.MessageDialog(
-            parent=win,
-            modal=True,
-            message_type=Gtk.MessageType.WARNING,
-            buttons=Gtk.ButtonsType.OK,
-            text=message
-        )
-    dialog.run()
-    dialog.destroy()
+    win.warningmessage.set_markup("<span foreground='#FF0000'>" + message + "</span>")
+    win.warning.set_reveal_child(True)
+    GLib.timeout_add_seconds(2.5, hide_error)
 
 def init_camera_feed():
     list = get_video_resolution()
-    if (start_camera_feed(list[0], list[1], list[2], list[3])):
+    attemptInit = start_camera_feed(list[0], list[1], list[2], list[3])
+    if len(attemptInit) == 0:
         camwin.show()
         win.btn_showcam.set_active(True)
     else:
         stop_camera_feed()
-        show_error("Unable to start feed. Either the device is not able to output video or the resource is busy")
+        show_error(attemptInit)
 
 def clear_and_rebuild():
     card = get_active_card()
@@ -133,11 +138,9 @@ class Window(Gtk.Window):
         fixed = Gtk.Fixed()
         self.add(fixed)
         grid = Gtk.Grid()
-        grid.set_row_spacing(10)
         grid.set_column_spacing(10)
         grid.set_row_homogeneous(False)
         grid.set_column_homogeneous(False)
-        fixed.put(grid, 30, 30)
 
         # boxes
         self.menulabelbox = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
@@ -182,8 +185,22 @@ class Window(Gtk.Window):
         self.btn_showcam.set_margin_bottom(30)
         self.btn_showcam.connect("toggled", self.on_btn_showcam_toggled)
 
+        # warning message
+        self.warningcontainer = Gtk.Box(hexpand = True)
+        self.warningcontainer.set_margin_bottom(10)
+        self.warning = Gtk.Revealer(hexpand = True)
+        self.warning.set_transition_type(Gtk.RevealerTransitionType.CROSSFADE)
+        self.warning.props.transition_duration = 1250
+        self.warning.set_reveal_child(False)
+        self.warningmessage = Gtk.Label()
+        self.warningmessage.props.halign = Gtk.Align.CENTER
+        self.warning.add(self.warningmessage)
+        self.warningcontainer.add(self.warning)
+
         # set up grid
+        fixed.put(grid, 30, 30)
         grid.add(self.devicelabelbox)
+        grid.attach_next_to(self.warningcontainer, self.devicelabelbox, Gtk.PositionType.TOP, 30, 1)
         grid.attach_next_to(self.devicecontrolbox, self.devicelabelbox, Gtk.PositionType.RIGHT, 1, 1)
         grid.attach_next_to(self.btn_defaults, self.devicecontrolbox, Gtk.PositionType.RIGHT, 1, 1)
         grid.attach_next_to(self.btn_showcam, self.btn_defaults, Gtk.PositionType.RIGHT, 1, 1)
@@ -193,12 +210,12 @@ class Window(Gtk.Window):
         grid.attach_next_to(self.intcontrolbox, self.intlabelbox, Gtk.PositionType.RIGHT, 20, 1)
         grid.attach_next_to(self.boollabelbox, self.intcontrolbox, Gtk.PositionType.RIGHT, 1, 1)
         grid.attach_next_to(self.boolcontrolbox, self.boollabelbox, Gtk.PositionType.RIGHT, 1, 1)
-
+       
     def on_btn_showcam_toggled(self, widget):
         if widget.get_active() and not camwin.props.visible:
             init_camera_feed()
         elif widget.get_active() and camwin.props.visible:
-            pass 
+            pass
         else:
             stop_camera_feed()
 
