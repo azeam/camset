@@ -54,7 +54,8 @@ def hide_error():
     win.warning.set_reveal_child(False)
 
 def show_error(message):
-    win.warningmessage.set_markup("<span foreground='#FF0000'>" + message + "</span>")
+    win.warningmessage.get_buffer().set_text("")
+    win.warningmessage.get_buffer().insert_markup(win.warningmessage.get_buffer().get_end_iter(), "<span foreground='#FF0000'>" + message + "</span>", -1)
     win.warning.set_reveal_child(True)
     GLib.timeout_add_seconds(2.5, hide_error)
 
@@ -192,7 +193,12 @@ class Window(Gtk.Window):
         self.warning.set_transition_type(Gtk.RevealerTransitionType.CROSSFADE)
         self.warning.props.transition_duration = 1250
         self.warning.set_reveal_child(False)
-        self.warningmessage = Gtk.Label()
+        self.warningmessage = Gtk.TextView()
+        self.warningmessage.set_editable(False)
+        self.warningmessage.set_left_margin(10)
+        self.warningmessage.set_right_margin(10)
+        self.warningmessage.set_top_margin(5)
+        self.warningmessage.set_bottom_margin(5)
         self.warningmessage.props.halign = Gtk.Align.CENTER
         self.warning.add(self.warningmessage)
         self.warningcontainer.add(self.warning)
