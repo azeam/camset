@@ -19,21 +19,22 @@ pkg-config
 
 If running from source (not using the camset pip package) you will also need gi (PyGObject @ pip) and OpenCV (opencv-python @ pip)
 
-**Installation**  
-## For Ubuntu:  
+## Installation
+
+### For Ubuntu:  
 1. `sudo apt-get install python3 python3-pip v4l-utils pkg-config libcairo2-dev libgirepository1.0-dev`  
 2. `pip3 install camset`
 
 The pip install includes a .desktop file, which should be picked up by the DE. If `camset` is not found you may need to set up your path environment, for example:  
 `PATH=$PATH:/home/USER/.local/bin`
 
-### Note for LinuxBrew(HomeBrew) users: 
+#### Note for LinuxBrew(HomeBrew) users: 
 
 Brew can sometimes take over `ld` and `pkg-config` binarys from system installed ones depending on what apps may have installed via brew in the past. 
 
-See: (Install fails on pycairo dependancy )[https://github.com/azeam/camset/issues/8]
+See: [Install fails on pycairo dependancy](https://github.com/azeam/camset/issues/8)
 
 To fix install the requried dependaices via brew (This will install a lot of things and take a very long time): 
 `brew install cairo pkg-config pygobject3 gtk+3`
 
-Alternatively disable or remove brew compeonts that provide or require `pkg-config` and `ld` then follow the Ubuntu instructions from above. 
+Alternatively disable or remove brew compeonts that provide or require `pkg-config` and `ld` then follow the [`Ubuntu instructions`](#for-ubuntu). from above. 
