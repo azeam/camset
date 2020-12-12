@@ -374,7 +374,11 @@ def read_capabilites(card):
     menvalue = 0 # set menvalue when scanning menu to be able to read from menu options
     for line in capabilites:
         line = line.strip()
-        if "0x" in line:
+        if line == "User Controls":
+            continue
+        elif line == "Camera Controls":
+            continue
+        elif "0x" in line:
             setting = line.split('0x', 1)[0].strip()
             label = str.replace(setting, '_', ' ').title()
             value = line.split("value=", 1)[1]
