@@ -22,19 +22,20 @@ If running from source (not using the camset pip package) you will also need gi 
 ## Installation
 
 ### For Ubuntu:  
-1. `sudo apt-get install python3 python3-pip v4l-utils pkg-config libcairo2-dev libgirepository1.0-dev`  
-2. `pip3 install camset`
+1. `sudo apt-get install python3 python3-pip v4l-utils pkg-config`  
+2. `pip3 install camset`  
+(If encountering problems with the cairo dependency, installing these additional packages should resolve it: `sudo apt-get install libcairo2-dev libgirepository1.0-dev`) and then repeat step 2.
 
-The pip install includes a .desktop file, which should be picked up by the DE. If `camset` is not found you may need to set up your path environment, for example:  
+The pip install includes a .desktop file, which should be picked up by the desktop environment. If `camset` is not found you may need to set up your path environment, for example:  
 `PATH=$PATH:/home/USER/.local/bin`
 
 #### Note for LinuxBrew(HomeBrew) users: 
 
-Brew can sometimes take over `ld` and `pkg-config` binarys from system installed ones depending on what apps may have installed via brew in the past. 
+Brew can sometimes take over `ld` and `pkg-config` binaries from system installed ones depending on what apps may have been installed via brew in the past. 
 
-See: [Install fails on pycairo dependancy](https://github.com/azeam/camset/issues/8)
+See: [Install fails on pycairo dependency](https://github.com/azeam/camset/issues/8)
 
-To fix install the requried dependaices via brew (This will install a lot of things and take a very long time): 
+To fix this install the requried dependencies via brew (this will install a lot of things and take a very long time):  
 `brew install cairo pkg-config pygobject3 gtk+3`
 
-Alternatively disable or remove brew compeonts that provide or require `pkg-config` and `ld` then follow the [`Ubuntu instructions`](#for-ubuntu). from above. 
+Alternatively disable or remove brew components that provide or require `pkg-config` and `ld` and then follow the [`Ubuntu instructions`](#for-ubuntu) from above. 
