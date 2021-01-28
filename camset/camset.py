@@ -97,7 +97,7 @@ def get_video_resolution():
     text = model[index]
     res = text[0].split(" ")[-1]
     pixelformat = text[0].split(" - ", 1)[0]
-    vfeedwidth = res.split("x", 1)[0]
+    vfeedwidth = res.split("x", 1)[0]                 
     vfeedheight = res.split("x", 1)[1]
     fourcode = cv2.VideoWriter_fourcc(*'{}'.format(pixelformat))
     return [pixelformat, vfeedwidth, vfeedheight, fourcode]
@@ -231,7 +231,7 @@ class Window(Gtk.Window):
         capabilites = capread.stdout.split('\n')
         for line in capabilites:
             line = line.strip()
-            if "0x" in line:
+            if "0x00" in line:
                 if not "flags=inactive" in line:
                     setting = line.split('0x', 1)[0].strip()
                     value = line.split("default=", 1)[1]
@@ -323,8 +323,8 @@ def read_resolution_capabilites(card):
                 pre = pre.split("'", 1)[0]
             else:
                 if "Size:" in line:
-                    post = line.split("Size: ", 1)[1]
-                    post = post.split(" ")[-1]
+                    post = line.split("Size: Stepwise 32x32 - ", 1)[1]
+                    post = post.split(" ")[-4]                   #Size: Stepwise 32x32 - 2592x1944 with step 2/2
                     output = " - ".join((pre, post))
                     win.ctrl_store.append([output])
                     showcombo = True
@@ -357,6 +357,7 @@ def read_resolution_capabilites(card):
                 pf = line.split("'", 1)[1]
                 pf = pf.split("'", 1)[0]
                 strcheck = " - ".join((pf, hewi))
+            
         # count index, set active
         index = 0
         for item in win.ctrl_store:
@@ -378,7 +379,11 @@ def read_capabilites(card):
             continue
         elif line == "Camera Controls":
             continue
-        elif "0x" in line:
+        elif line == "Codec Controls":   # added
+            continue
+        elif line == "JPEG Compression Controls": #added
+            continue
+        elif "0x00" in line:                   # 0x0 is in some other lines under Codec Controls so added a zero
             setting = line.split('0x', 1)[0].strip()
             label = str.replace(setting, '_', ' ').title()
             value = line.split("value=", 1)[1]
@@ -388,14 +393,14 @@ def read_capabilites(card):
             win.label.set_size_request(-1, 35)
             win.label.set_halign(Gtk.Align.END)
             
-            if "int" in line:
+            if "(int)" in line:    # added parantheses becuase there is an 'intmenu' which is a menu rather than int
                 upper = line.split("max=", 1)[1]
                 upper = int(upper.split(' ', 1)[0])
                 lower = line.split("min=", 1)[1]
                 lower = int(lower.split(' ', 1)[0])
                 step = line.split("step=", 1)[1]
                 step = int(step.split(' ', 1)[0])
-
+                    
                 adj = Gtk.Adjustment(value = value, lower = lower, upper = upper, step_increment = step, page_increment = 5, page_size=0)
                 win.scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
                 win.scale.set_digits(0)
@@ -405,7 +410,7 @@ def read_capabilites(card):
                 win.intcontrolbox.pack_start(win.scale, False, False, 0)
                 win.intlabelbox.pack_start(win.label, False, False, 0)
                     
-            if "bool" in line:                
+            if "(bool)" in line:    #            
                 win.switch = Gtk.Switch(hexpand = False, vexpand = False)
                 if value == 1:
                     win.switch.set_active(True)
