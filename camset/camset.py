@@ -119,7 +119,7 @@ class CamWindow(Gtk.Window):
         self.vidcontrolgrid = Gtk.Grid()
         self.vidcontrolgrid.set_column_homogeneous(True)
         self.label = Gtk.Label(label="Camera feed scale (percentage)")  
-        self.adj = Gtk.Adjustment(value = videosize, lower = 1, upper = 100, step_increment = 1, page_increment = 5, page_size=0)
+        self.adj = Gtk.Adjustment(value = videosize, lower = 1, upper = 100, step_increment = 1, page_increment = 1, page_size=0)
         self.scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=self.adj)
         self.scale.set_digits(0)
         self.scale.set_value_pos(Gtk.PositionType.RIGHT)
@@ -396,7 +396,7 @@ def read_capabilites(card):
                 step = line.split("step=", 1)[1]
                 step = int(step.split(' ', 1)[0])
 
-                adj = Gtk.Adjustment(value = value, lower = lower, upper = upper, step_increment = step, page_increment = 5, page_size=0)
+                adj = Gtk.Adjustment(value = value, lower = lower, upper = upper, step_increment = step, page_increment = 1, page_size=0)
                 win.scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
                 win.scale.set_digits(0)
                 win.scale.set_value_pos(Gtk.PositionType.RIGHT)

@@ -24,7 +24,7 @@ If running from source (not using the camset pip package) you will also need gi 
 ### For Ubuntu:  
 1. `sudo apt-get install python3 python3-pip v4l-utils pkg-config`  
 2. `pip3 install camset`  
-(If encountering problems with the cairo dependency, installing these additional packages should resolve it: `sudo apt-get install libcairo2-dev libgirepository1.0-dev`) and then repeat step 2.
+(If encountering problems with the cairo dependency, installing these additional packages should resolve it: `sudo apt-get install libcairo2-dev libgirepository1.0-dev` and then repeat step 2).
 
 The pip install includes a .desktop file, which should be picked up by the desktop environment. If `camset` is not found you may need to set up your path environment, for example:  
 `PATH=$PATH:/home/USER/.local/bin`
