@@ -26,8 +26,11 @@ If running from source (not using the camset pip package) you will also need gi 
 2. `pip3 install camset`  
 (If encountering problems with the cairo dependency, installing these additional packages should resolve it: `sudo apt-get install libcairo2-dev libgirepository1.0-dev` and then repeat step 2).
 
-The pip install includes a .desktop file, which should be picked up by the desktop environment. If `camset` is not found you may need to set up your path environment, for example:  
-`PATH=$PATH:/home/USER/.local/bin`
+The pip install includes a .desktop file, which should be picked up by the desktop environment. If `camset` is not found you may need to set up your path environment, for example (open a terminal and write):  
+`PATH=$PATH:$HOME/.local/bin`
+
+or persistently:  
+`echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc`
 
 #### Note for LinuxBrew(HomeBrew) users: 
 
