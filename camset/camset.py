@@ -136,12 +136,13 @@ class Window(Gtk.Window):
         Gtk.Window.__init__(self, title="Camset")
         
         # main container
-        fixed = Gtk.Fixed()
-        self.add(fixed)
-        grid = Gtk.Grid()
-        grid.set_column_spacing(10)
-        grid.set_row_homogeneous(False)
-        grid.set_column_homogeneous(False)
+        self.layout = Gtk.ScrolledWindow()
+        self.add(self.layout)
+        self.grid = Gtk.Grid()
+        self.layout.add(self.grid)
+        self.grid.set_column_spacing(10)
+        self.grid.set_row_homogeneous(False)
+        self.grid.set_column_homogeneous(False)
 
         # boxes
         self.menulabelbox = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
@@ -204,19 +205,18 @@ class Window(Gtk.Window):
         self.warningcontainer.add(self.warning)
 
         # set up grid
-        fixed.put(grid, 30, 30)
-        grid.add(self.devicelabelbox)
-        grid.attach_next_to(self.warningcontainer, self.devicelabelbox, Gtk.PositionType.TOP, 30, 1)
-        grid.attach_next_to(self.devicecontrolbox, self.devicelabelbox, Gtk.PositionType.RIGHT, 1, 1)
-        grid.attach_next_to(self.btn_defaults, self.devicecontrolbox, Gtk.PositionType.RIGHT, 1, 1)
-        grid.attach_next_to(self.btn_showcam, self.btn_defaults, Gtk.PositionType.RIGHT, 1, 1)
-        grid.attach_next_to(self.menulabelbox, self.devicelabelbox, Gtk.PositionType.BOTTOM, 1, 1)
-        grid.attach_next_to(self.menucontrolbox, self.menulabelbox, Gtk.PositionType.RIGHT, 1, 1)
-        grid.attach_next_to(self.intlabelbox, self.menucontrolbox, Gtk.PositionType.RIGHT, 1, 1)
-        grid.attach_next_to(self.intcontrolbox, self.intlabelbox, Gtk.PositionType.RIGHT, 20, 1)
-        grid.attach_next_to(self.boollabelbox, self.intcontrolbox, Gtk.PositionType.RIGHT, 1, 1)
-        grid.attach_next_to(self.boolcontrolbox, self.boollabelbox, Gtk.PositionType.RIGHT, 1, 1)
-       
+        self.grid.add(self.devicelabelbox)
+        self.grid.attach_next_to(self.warningcontainer, self.devicelabelbox, Gtk.PositionType.TOP, 30, 1)
+        self.grid.attach_next_to(self.devicecontrolbox, self.devicelabelbox, Gtk.PositionType.RIGHT, 1, 1)
+        self.grid.attach_next_to(self.btn_defaults, self.devicecontrolbox, Gtk.PositionType.RIGHT, 1, 1)
+        self.grid.attach_next_to(self.btn_showcam, self.btn_defaults, Gtk.PositionType.RIGHT, 1, 1)
+        self.grid.attach_next_to(self.menulabelbox, self.devicelabelbox, Gtk.PositionType.BOTTOM, 1, 1)
+        self.grid.attach_next_to(self.menucontrolbox, self.menulabelbox, Gtk.PositionType.RIGHT, 1, 1)
+        self.grid.attach_next_to(self.intlabelbox, self.menucontrolbox, Gtk.PositionType.RIGHT, 1, 1)
+        self.grid.attach_next_to(self.intcontrolbox, self.intlabelbox, Gtk.PositionType.RIGHT, 20, 1)
+        self.grid.attach_next_to(self.boollabelbox, self.intcontrolbox, Gtk.PositionType.RIGHT, 1, 1)
+        self.grid.attach_next_to(self.boolcontrolbox, self.boollabelbox, Gtk.PositionType.RIGHT, 1, 1)
+        
     def on_btn_showcam_toggled(self, widget):
         if widget.get_active() and not camwin.props.visible:
             init_camera_feed()
@@ -479,7 +479,7 @@ def show_frame():
                                             8,
                                             frame.shape[1],
                                             frame.shape[0],
-                                            frame.shape[2]*frame.shape[1]) # last argument is "rowstride (int) – Distance in bytes between row starts" (??)
+                                            frame.shape[2]*frame.shape[1]) # last argument is "rowstride (int) - Distance in bytes between row starts" (??)
         camwin.image.set_from_pixbuf(pb.copy())
     camwin.resize(1, 1)
     return True
@@ -487,6 +487,7 @@ def show_frame():
 def main():
     camwin.hide()
     check_devices()
+    win.resize(win.grid.get_allocation().width, win.grid.get_allocation().height + 20) # hardcoded extra margin seems needed to not show scrollbars, not sure where space is coming from
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
     Gtk.main()
