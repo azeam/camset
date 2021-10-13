@@ -50,14 +50,17 @@ def start_camera_feed(pixelformat, vfeedwidth, vfeedheight, fourcode):
         runId = 0       
     return errorMsg
 
-def hide_error():
+def hide_message():
     win.warning.set_reveal_child(False)
 
-def show_error(message):
+def show_message(message, error):
     win.warningmessage.get_buffer().set_text("")
-    win.warningmessage.get_buffer().insert_markup(win.warningmessage.get_buffer().get_end_iter(), "<span foreground='#FF0000'>" + message + "</span>", -1)
+    if error:
+        win.warningmessage.get_buffer().insert_markup(win.warningmessage.get_buffer().get_end_iter(), "<span foreground='#FF0000'>" + message + "</span>", -1)
+    else:
+        win.warningmessage.get_buffer().insert_markup(win.warningmessage.get_buffer().get_end_iter(), "<span foreground='#00FF00'>" + message + "</span>", -1)
     win.warning.set_reveal_child(True)
-    GLib.timeout_add_seconds(2.5, hide_error)
+    GLib.timeout_add_seconds(2.5, hide_message)
 
 def init_camera_feed():
     list = get_video_resolution()
@@ -67,7 +70,7 @@ def init_camera_feed():
         win.btn_showcam.set_active(True)
     else:
         stop_camera_feed()
-        show_error(attemptInit)
+        show_message(attemptInit, True)
 
 def clear_and_rebuild():
     card = get_active_card()
@@ -137,6 +140,16 @@ class Window(Gtk.Window):
         
         # main container
         self.layout = Gtk.ScrolledWindow()
+
+        # TODO: add to flowbox
+        #self.layout.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        #flowbox = Gtk.FlowBox()
+        #flowbox.set_valign(Gtk.Align.START)
+        #flowbox.set_max_children_per_line(30)
+        #flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
+        #self.layout.add(flowbox)
+        #flowbox.add(ITEM)
+
         self.add(self.layout)
         self.grid = Gtk.Grid()
         self.layout.add(self.grid)
@@ -204,18 +217,118 @@ class Window(Gtk.Window):
         self.warning.add(self.warningmessage)
         self.warningcontainer.add(self.warning)
 
+        # toolbar
+        toolbar = Gtk.Toolbar()
+
+        openbtn = Gtk.ToolButton()
+        openbtn.set_label("Load settings")
+        openbtn.set_is_important(True)
+        openbtn.set_icon_name("gtk-open")
+        openbtn.connect('clicked', self.on_open_clicked)
+        toolbar.add(openbtn)
+
+        savebtn = Gtk.ToolButton()
+        savebtn.set_label("Save settings")
+        savebtn.set_is_important(True)
+        savebtn.set_icon_name("gtk-save")
+        savebtn.connect('clicked', self.on_save_clicked)
+        toolbar.add(savebtn)
+
         # set up grid
         self.grid.add(self.devicelabelbox)
         self.grid.attach_next_to(self.warningcontainer, self.devicelabelbox, Gtk.PositionType.TOP, 30, 1)
         self.grid.attach_next_to(self.devicecontrolbox, self.devicelabelbox, Gtk.PositionType.RIGHT, 1, 1)
         self.grid.attach_next_to(self.btn_defaults, self.devicecontrolbox, Gtk.PositionType.RIGHT, 1, 1)
         self.grid.attach_next_to(self.btn_showcam, self.btn_defaults, Gtk.PositionType.RIGHT, 1, 1)
+        self.grid.attach_next_to(toolbar, self.warningcontainer, Gtk.PositionType.TOP, 30, 1)
         self.grid.attach_next_to(self.menulabelbox, self.devicelabelbox, Gtk.PositionType.BOTTOM, 1, 1)
         self.grid.attach_next_to(self.menucontrolbox, self.menulabelbox, Gtk.PositionType.RIGHT, 1, 1)
         self.grid.attach_next_to(self.intlabelbox, self.menucontrolbox, Gtk.PositionType.RIGHT, 1, 1)
         self.grid.attach_next_to(self.intcontrolbox, self.intlabelbox, Gtk.PositionType.RIGHT, 20, 1)
         self.grid.attach_next_to(self.boollabelbox, self.intcontrolbox, Gtk.PositionType.RIGHT, 1, 1)
         self.grid.attach_next_to(self.boolcontrolbox, self.boollabelbox, Gtk.PositionType.RIGHT, 1, 1)
+
+    def on_open_clicked(self, btn):
+        dialog = Gtk.FileChooserDialog(
+            title="Choose configuration file to load", parent=self, action=Gtk.FileChooserAction.OPEN
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL,
+            Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_OPEN,
+            Gtk.ResponseType.OK,
+        )
+
+        self.add_filters(dialog)
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            filename = dialog.get_filename()
+            card = get_active_card()
+            try:              
+                f = open(filename, "r")
+                lines = f.readlines()
+                for line in lines:
+                    splits = line.split("=")
+                    setting = splits[0]
+                    value = splits[1]
+                    subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=False, universal_newlines=True)
+                f.close()
+                show_message("Settings file {0} successfully loaded".format(filename), False)
+                clear_and_rebuild()
+            except:                
+                dialog.destroy()
+                show_message("Unable to load file {0}".format(filename), True)
+                return
+        dialog.destroy()
+        
+    def on_save_clicked(self, btn):
+        card = get_active_card()
+        capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
+        capabilites = capread.stdout.split('\n')
+        tostore = ""
+        for line in capabilites:
+            line = line.strip()
+            if "0x" in line:
+                if not "flags=inactive" in line:
+                    setting = line.split('0x', 1)[0].strip()
+                    value = line.split("value=", 1)[1]
+                    value = int(value.split(' ', 1)[0])
+                    tostore += '{0}={1}\n'.format(setting, value)
+        
+        dialog = Gtk.FileChooserDialog(
+            title="Save current configuration", parent=self, action=Gtk.FileChooserAction.SAVE
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL,
+            Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_SAVE,
+            Gtk.ResponseType.OK,
+        )
+        dialog.set_current_name("{0}.camset".format(cardname))
+        dialog.set_do_overwrite_confirmation(True)
+        self.add_filters(dialog)
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            filename = dialog.get_filename()
+            try:              
+                f = open(filename, "w")
+                f.write(tostore.strip())
+                f.close()
+                show_message("Settings file {0} successfully saved".format(filename), False)
+            except:                
+                dialog.destroy()
+                show_message("Unable to save file {0}".format(filename), True)
+                return
+
+        dialog.destroy()
+
+    def add_filters(self, dialog):
+        filter_config = Gtk.FileFilter()
+        filter_config.set_name("Camset config files")
+        filter_config.add_pattern("*.camset")
+        dialog.add_filter(filter_config)
         
     def on_btn_showcam_toggled(self, widget):
         if widget.get_active() and not camwin.props.visible:
@@ -252,6 +365,7 @@ class Window(Gtk.Window):
             devnameline = devnameread.stdout.split('\n')
             for line in devnameline:
                 if "Card type" in line:
+                    global cardname 
                     cardname = line.split(': ', 1)[1].strip()
                     if len(cardname) > 0:
                         win.set_title(title="Camset - {}".format(cardname))
