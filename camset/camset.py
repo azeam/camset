@@ -1,11 +1,17 @@
 import cv2
 import gi
 import subprocess
+import os
+import pathlib
 
 # TODO: proper ioctl calls instead of using v4l2-ctl ... ?
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, GdkPixbuf
+
+def get_config_path():
+    path = "~/.config/camset"
+    return os.path.expanduser(path)
 
 def set_video_size(callback):
     global videosize
@@ -68,9 +74,11 @@ def init_camera_feed():
     if len(attemptInit) == 0:
         camwin.show()
         win.btn_showcam.set_active(True)
+        return True
     else:
         stop_camera_feed()
         show_message(attemptInit, True)
+        return False
 
 def clear_and_rebuild():
     card = get_active_card()
@@ -104,6 +112,28 @@ def get_video_resolution():
     vfeedheight = res.split("x", 1)[1]
     fourcode = cv2.VideoWriter_fourcc(*'{}'.format(pixelformat))
     return [pixelformat, vfeedwidth, vfeedheight, fourcode]
+
+def load_settings_from_file(filename, dialog):
+    card = get_active_card()
+    try:              
+        f = open(filename, "r")
+        lines = f.readlines()
+        for line in lines:
+            splits = line.split("=")
+            setting = splits[0]
+            value = splits[1]
+            if (setting == "resolution_index"):
+                win.res_combobox.set_active(int(value))
+                continue
+            subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=False, universal_newlines=True)
+        f.close()
+        show_message("Settings file {0} successfully loaded".format(filename), False)
+        clear_and_rebuild()
+    except Exception as e:
+        if dialog:
+            dialog.destroy()
+        show_message("Unable to load file {0} - {1}".format(filename, e), True)
+        return
 
 class CamWindow(Gtk.Window):
     def __init__(self):
@@ -248,6 +278,8 @@ class Window(Gtk.Window):
         self.grid.attach_next_to(self.boollabelbox, self.intcontrolbox, Gtk.PositionType.RIGHT, 1, 1)
         self.grid.attach_next_to(self.boolcontrolbox, self.boollabelbox, Gtk.PositionType.RIGHT, 1, 1)
 
+        pathlib.Path(get_config_path()).mkdir(parents=True, exist_ok=True)
+
     def on_open_clicked(self, btn):
         dialog = Gtk.FileChooserDialog(
             title="Choose configuration file to load", parent=self, action=Gtk.FileChooserAction.OPEN
@@ -260,26 +292,12 @@ class Window(Gtk.Window):
         )
 
         self.add_filters(dialog)
-
+        dialog.set_current_folder(get_config_path())
+        
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
             filename = dialog.get_filename()
-            card = get_active_card()
-            try:              
-                f = open(filename, "r")
-                lines = f.readlines()
-                for line in lines:
-                    splits = line.split("=")
-                    setting = splits[0]
-                    value = splits[1]
-                    subprocess.run(['v4l2-ctl', '-d', card, '-c', '{0}={1}'.format(setting, value)], check=False, universal_newlines=True)
-                f.close()
-                show_message("Settings file {0} successfully loaded".format(filename), False)
-                clear_and_rebuild()
-            except:                
-                dialog.destroy()
-                show_message("Unable to load file {0}".format(filename), True)
-                return
+            load_settings_from_file(filename, dialog)
         dialog.destroy()
         
     def on_save_clicked(self, btn):
@@ -295,7 +313,7 @@ class Window(Gtk.Window):
                     value = line.split("value=", 1)[1]
                     value = int(value.split(' ', 1)[0])
                     tostore += '{0}={1}\n'.format(setting, value)
-        
+        tostore += "resolution_index={0}".format(win.res_combobox.get_active())
         dialog = Gtk.FileChooserDialog(
             title="Save current configuration", parent=self, action=Gtk.FileChooserAction.SAVE
         )
@@ -307,6 +325,7 @@ class Window(Gtk.Window):
         )
         dialog.set_current_name("{0}.camset".format(cardname))
         dialog.set_do_overwrite_confirmation(True)
+        dialog.set_current_folder(get_config_path())
         self.add_filters(dialog)
 
         response = dialog.run()
@@ -377,7 +396,10 @@ class Window(Gtk.Window):
             runId = 0
             pass
         clear_and_rebuild()
-        init_camera_feed()
+        if init_camera_feed():
+            configfile = get_config_path() + "/" + cardname + ".camset"
+            if (os.path.exists(configfile)):
+                load_settings_from_file(configfile, None)
 
 def set_int_value(callback, card, setting):
     value = str(int(callback.get_value()))
