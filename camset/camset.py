@@ -264,6 +264,11 @@ class Window(Gtk.Window):
         savebtn.connect('clicked', self.on_save_clicked)
         toolbar.add(savebtn)
 
+        self.autoload_checkbutton = Gtk.ToggleToolButton()
+        self.autoload_checkbutton.set_label("Autoload settings")
+        self.autoload_checkbutton.set_active(True)
+        toolbar.add(self.autoload_checkbutton)
+
         # set up grid
         self.grid.add(self.devicelabelbox)
         self.grid.attach_next_to(self.warningcontainer, self.devicelabelbox, Gtk.PositionType.TOP, 30, 1)
@@ -398,7 +403,7 @@ class Window(Gtk.Window):
         clear_and_rebuild()
         if init_camera_feed():
             configfile = get_config_path() + "/" + cardname + ".camset"
-            if (os.path.exists(configfile)):
+            if (os.path.exists(configfile) and win.autoload_checkbutton.get_active()):
                 load_settings_from_file(configfile, None)
 
 def set_int_value(callback, card, setting):

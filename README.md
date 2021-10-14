@@ -42,3 +42,7 @@ To fix this install the requried dependencies via brew (this will install a lot 
 `brew install cairo pkg-config pygobject3 gtk+3`
 
 Alternatively disable or remove brew components that provide or require `pkg-config` and `ld` and then follow the [`Ubuntu instructions`](#for-ubuntu) from above. 
+
+## Notes
+
+Settings can be saved and loaded. If the "Autoload settings" button is checked, camset will look in `~/.config/camset` for a settings file with the same name as the device (as suggested when saving settings) and load it when starting the application or when switching to that device.

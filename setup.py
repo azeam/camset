@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='camset',
-    version='0.0.16',
+    version='0.0.17',
     author='Dennis Hägg',
     description='GUI for v4l2-ctl',
     long_description=long_description,
