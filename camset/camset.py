@@ -77,10 +77,12 @@ class Window(Gtk.Window):
         configfile = helpers.get_config_path() + "/" + self.cardname + ".camset"
         if (os.path.exists(configfile) and self.autoload_checkbutton.get_active() and self.read_resolution_capabilites()):
             dialogs.load_settings_from_file(configfile, None, self)
-    
+        self.btn_showcam.set_active(True)
+
     def on_resolution_changed(self, _callback):
         if (camwin.props.visible):
             camwin.stop_camera_feed()
+        self.btn_showcam.set_active(True)
 
     def read_resolution_capabilites(self):
         outputread = subprocess.run(['v4l2-ctl', '-d', self.card, '--list-formats-ext'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
