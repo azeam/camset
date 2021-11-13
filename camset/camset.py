@@ -5,11 +5,11 @@ import os
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from cam_window import CamWindow
-from dialogs import Dialogs
-from helpers import Helpers
-from v4l2control import V4L2Control
-from layout import Layout
+from camset.cam_window import CamWindow
+from camset.dialogs import Dialogs
+from camset.helpers import Helpers
+from camset.v4l2control import V4L2Control
+from camset.layout import Layout
 class Window(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Camset")
