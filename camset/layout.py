@@ -77,18 +77,18 @@ class Layout:
         self.win.warning.add(self.win.warningmessage)
         self.win.warningcontainer.add(self.win.warning)
 
-    def setup_toolbar(self, path):
+    def setup_toolbar(self, path, v4l2_control):
         openbtn = Gtk.ToolButton()
         openbtn.set_label("Load settings")
         openbtn.set_is_important(True)
         openbtn.set_icon_name("gtk-open")
-        openbtn.connect('clicked', self.dialogs.on_open_clicked, self.win, path)
+        openbtn.connect('clicked', self.dialogs.on_open_clicked, self.win, path, v4l2_control)
         
         savebtn = Gtk.ToolButton()
         savebtn.set_label("Save settings")
         savebtn.set_is_important(True)
         savebtn.set_icon_name("gtk-save")
-        savebtn.connect('clicked', self.dialogs.on_save_clicked, self.win, path)
+        savebtn.connect('clicked', self.dialogs.on_save_clicked, self.win, path, v4l2_control)
         
         self.win.autoload_checkbutton = Gtk.ToggleToolButton()
         self.win.autoload_checkbutton.set_label("Autoload settings")

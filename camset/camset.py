@@ -20,7 +20,7 @@ class Window(Gtk.Window):
         layout.setup_device_selection_box()
         layout.setup_buttons()        
         layout.setup_warning_container()    
-        layout.setup_toolbar(helpers.get_config_path())
+        layout.setup_toolbar(helpers.get_config_path(), V4L2Control(self))
         layout.setup_grid()
         self.layout = layout
 
@@ -67,16 +67,14 @@ class Window(Gtk.Window):
         camwin.stop_camera_feed() 
         self.card = helpers.get_active_card(self)
         self.cardname = helpers.get_card_name(self.card)
-        if len(self.cardname) > 0:
-            self.set_title(title="Camset - {}".format(self.cardname))
-            camwin.set_title(title="Camera feed - {}".format(self.cardname))
-        else:
-            self.set_title(title="Camset")
-            camwin.set_title(title="Camera feed")
+        subtitle = " - {}".format(self.cardname) if len(self.cardname) > 0 else ""
+        self.set_title(title="Camset{}".format(subtitle))
+        camwin.set_title(title="Camera feed{}".format(subtitle))
+        
         self.clear_and_rebuild()
         configfile = helpers.get_config_path() + "/" + self.cardname + ".camset"
         if (os.path.exists(configfile) and self.autoload_checkbutton.get_active() and self.read_resolution_capabilites()):
-            dialogs.load_settings_from_file(configfile, None, self)
+            dialogs.load_settings_from_file(configfile, None, self, v4l2_control)
         self.btn_showcam.set_active(True)
 
     def on_resolution_changed(self, _callback):
@@ -87,33 +85,25 @@ class Window(Gtk.Window):
     def read_resolution_capabilites(self):
         outputread = subprocess.run(['v4l2-ctl', '-d', self.card, '--list-formats-ext'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
         outputs = outputread.stdout.split('\n')
-        pre = ''
-        post = ''
         has_resolution_capability = False
         self.ctrl_store = Gtk.ListStore(str)
         for line in outputs:
             if ":" in line:
                 line = line.strip()
                 if "'" in line:
-                    pre = line.split("'", 1)[1]
-                    pre = pre.split("'", 1)[0]
+                    pre = line.split("'", 1)[1].split("'", 1)[0]
                 else:
                     if "Size:" in line:
-                        post = line.split("Size: ", 1)[1]
-                        post = post.split(" ")[-1]
+                        post = line.split("Size: ", 1)[1].split(" ")[-1]
                         output = " - ".join((pre, post))
                         self.ctrl_store.append([output])
                         has_resolution_capability = True
         return has_resolution_capability
 
     def read_capabilites(self):
-        try:
-            capread = subprocess.run(['v4l2-ctl', '-d', self.card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
-        except:
-            return
-        capabilites = capread.stdout.split('\n')
+        capabilities = v4l2_control.get_capabilites()
         menu_value = 0 # set menu value when scanning menu to be able to read from menu options
-        for line in capabilites:
+        for line in capabilities:
             line = line.strip()
             if line == "User Controls":
                 continue
