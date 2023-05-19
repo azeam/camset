@@ -63,7 +63,7 @@ class Dialogs:
         dialog.destroy()
         
     def on_save_clicked(self, btn, win, path, v4l2_control):
-        capabilites = v4l2_control.get_capabilites()
+        capabilites = v4l2_control.get_capabilities(win.card)
         tostore = ""
         for line in capabilites:
             line = line.strip()

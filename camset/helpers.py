@@ -8,7 +8,7 @@ class Helpers:
         return os.path.expanduser(path)
     
     def get_active_card(self, win):
-        return win.device_selection.get_model()[win.device_selection.get_active()][0]
+        return win.device_selection.get_model()[win.device_selection.get_active()][0].split(' - ', 1)[0]
 
     def get_video_resolution(self, win):
         text = win.resolution_selection.get_model()[win.resolution_selection.get_active()]
