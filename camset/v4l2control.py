@@ -23,7 +23,7 @@ class V4L2Control:
     def set_sensitivity(self):
         controls = self.win.int_control_box.get_children()
         index = 0
-        for line in self.get_capabilites():
+        for line in self.get_capabilities(self.win.card):
             if "0x" in line and "int" in line:
                 index += 1
                 if (len(controls) > ((index -1))): # check because of error when filling ctrl_combobox at start
@@ -35,16 +35,16 @@ class V4L2Control:
         value = int(value.split(' ', 1)[0])
         self.set_value(setting, value, card)
 
-    def get_capabilites(self):
+    def get_capabilities(self, card):
         try:
-            capread = subprocess.run(['v4l2-ctl', '-d', self.win.card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
+            capread = subprocess.run(['v4l2-ctl', '-d', card, '-L'], check=True, universal_newlines=True, stdout=subprocess.PIPE)
         except:
             return
         capabilites = capread.stdout.split('\n')
         return capabilites
 
     def set_defaults(self):
-        capabilites = self.get_capabilites()
+        capabilites = self.get_capabilities(self.win.card)
         for line in capabilites:
             line = line.strip()
             if "0x" in line and "int" in line and not "flags=inactive" in line:

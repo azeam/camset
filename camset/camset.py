@@ -101,7 +101,7 @@ class Window(Gtk.Window):
         return has_resolution_capability
 
     def read_capabilites(self):
-        capabilities = v4l2_control.get_capabilites()
+        capabilities = v4l2_control.get_capabilities(self.card)
         menu_value = 0 # set menu value when scanning menu to be able to read from menu options
         for line in capabilities:
             line = line.strip()
@@ -151,8 +151,10 @@ class Window(Gtk.Window):
         for line in devices.stdout.split('\n'):
             if "dev" in line:
                 line = line.strip()
-                self.store.append ([line])
-                i += 1
+                capabilities = v4l2_control.get_capabilities(line)
+                if capabilities is not None and len(capabilities) > 1:
+                    self.store.append(["{0} - {1}".format(line, helpers.get_card_name(line))])
+                    i += 1
         self.device_selection.connect('changed', self.on_device_changed) # start after populating devices or action will be called when adding
         if (i > 0):
             self.device_selection.set_active(0)
