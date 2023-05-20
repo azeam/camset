@@ -27,7 +27,7 @@ class V4L2Control:
             if "0x" in line and "int" in line:
                 index += 1
                 if (len(controls) > ((index -1))): # check because of error when filling ctrl_combobox at start
-                    controls[(index - 1)].set_sensitive(False if "flags=inactive" else True)
+                    controls[(index - 1)].set_sensitive(False if "flags=inactive" in line else True)
                             
     def split_default_value(self, line, card):
         setting = line.split('0x', 1)[0].strip()
